@@ -16,7 +16,7 @@ app.use("/api/orders", orderRoutes);
 const aiRoutes = require("./api/aiRoutes");
 app.use("/api/ai", aiRoutes);
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
