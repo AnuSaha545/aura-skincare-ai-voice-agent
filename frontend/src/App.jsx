@@ -1,9 +1,12 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:5000/api/ai";
+const API_URL = `${(import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "")}/api/ai`;
 const MAX_RETRIES = 5;
+const SpeechRecognition =
+  typeof window === "undefined"
+    ? null
+    : window.SpeechRecognition || window.webkitSpeechRecognition;
 
 const orders = [
   {
@@ -37,7 +40,16 @@ const orders = [
     note: "Ordered 3 hours ago • Cancellation eligible",
   },
 ];
-
+function cleanText(text = "") {
+  return String(text)
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 function isRawToolCall(text) {
   if (typeof text !== "string") return false;
 
@@ -71,6 +83,8 @@ function App() {
   const [sessionActive, setSessionActive] = useState(false);
 
   const recognitionRef = useRef(null);
+  const startListeningRef = useRef(null);
+  const sendMessageRef = useRef(null);
   const voiceEnabledRef = useRef(false);
   const phaseRef = useRef("idle");
   const conversationRef = useRef([]);
@@ -83,11 +97,6 @@ function App() {
   const mountedRef = useRef(true);
   const endingRef = useRef(false);
   const utteranceRef = useRef(null);
-
-  const SpeechRecognition =
-    typeof window === "undefined"
-      ? null
-      : window.SpeechRecognition || window.webkitSpeechRecognition;
 
   const setPhase = useCallback((phase) => {
     phaseRef.current = phase;
@@ -169,7 +178,7 @@ function App() {
           phaseRef.current === "listening" &&
           !requestInFlightRef.current
         ) {
-          startListening();
+          startListeningRef.current?.();
         }
       }, delay);
     },
@@ -189,7 +198,7 @@ function App() {
 
       setPhase("speaking");
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(cleanText(text));
       utterance.lang = "en-IN";
       utterance.rate = 0.95;
       utterance.pitch = 1;
@@ -282,7 +291,7 @@ function App() {
         { role: "assistant", content: answer },
       ];
 
-      addTranscript("Aria", answer);
+      addTranscript("Aria", cleanText(answer));
       requestInFlightRef.current = false;
       abortRef.current = null;
 
@@ -299,7 +308,7 @@ function App() {
 
       setError(
         err.message ||
-          "Unable to connect to Aria. Check that the backend and Ollama are running."
+          "Unable to connect to Aria. Check the backend and its Groq API configuration."
       );
 
       requestInFlightRef.current = false;
@@ -314,7 +323,7 @@ function App() {
     }
   }
 
-  function startListening() {
+  const startListening = useCallback(() => {
     if (
       !SpeechRecognition ||
       !voiceEnabledRef.current ||
@@ -346,7 +355,7 @@ function App() {
 
       if (result?.isFinal && text) {
         retryCountRef.current = 0;
-        void sendMessage(text);
+        void sendMessageRef.current?.(text);
       }
     };
 
@@ -438,7 +447,7 @@ function App() {
         }
       }
     }
-  }
+  }, [scheduleListening, setPhase]);
 
   function startCall() {
     if (!SpeechRecognition) {
@@ -541,6 +550,7 @@ function App() {
   }
 
   useEffect(() => {
+    startListeningRef.current = startListening;
     mountedRef.current = true;
 
     return () => {
@@ -578,7 +588,11 @@ function App() {
 
       window.speechSynthesis.cancel();
     };
-  }, [clearRestartTimer]);
+  }, [clearRestartTimer, startListening]);
+
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
 
   const sendDisabled =
     !message.trim() || callState === "Thinking";
@@ -705,7 +719,7 @@ function App() {
                     key={`${index}-${item.speaker}`}
                   >
                     <strong>{item.speaker}</strong>
-                    <p>{item.text}</p>
+                    <p>{cleanText(item.text)}</p>
                   </div>
                 ))}
               </div>

@@ -8,21 +8,21 @@ const router = express.Router();
 
 router.post("/chat", async (req, res) => {
   try {
-    const {
-      message,
-      history = [],
-    } = req.body;
+    const { message, history = [] } = req.body || {};
 
-    if (!message || typeof message !== "string") {
+    if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
         error: "Message is required",
       });
     }
 
-    const response = await askAria(
-      message,
-      history
-    );
+    if (!Array.isArray(history)) {
+      return res.status(400).json({
+        error: "History must be an array",
+      });
+    }
+
+    const response = await askAria(message.trim(), history);
 
     res.json({
       response,
@@ -31,18 +31,25 @@ router.post("/chat", async (req, res) => {
     console.error("AI chat error:", error);
 
     res.status(500).json({
-      error: "AI service failed",
+      error: error.message || "AI service failed",
     });
   }
 });
 
 router.post("/summary", async (req, res) => {
   try {
-    const { transcript } = req.body;
+    const { transcript } = req.body || {};
 
     if (
       !Array.isArray(transcript) ||
-      transcript.length === 0
+      transcript.length === 0 ||
+      transcript.length > 200 ||
+      transcript.some(
+        (item) =>
+          !item ||
+          typeof item.speaker !== "string" ||
+          typeof item.text !== "string"
+      )
     ) {
       return res.status(400).json({
         error: "Transcript is required",
