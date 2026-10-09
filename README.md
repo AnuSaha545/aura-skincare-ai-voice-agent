@@ -1,109 +1,147 @@
-# Aura Skincare AI Voice Agent
+# Aura Skincare AI Voice Customer Support Agent
 
-A browser-based customer support agent built with React, Vite, Express, and Groq. Aria answers Aura Skincare policy questions, looks up the included demonstration orders, supports voice or typed interaction, and generates a structured call summary.
+An AI-powered voice customer support agent that helps Aura Skincare customers with order tracking, delivery questions, product inquiries, and brand policies through a browser-based conversational interface.
+
+Aria, the virtual support assistant, combines AI-generated responses with order lookup, voice interaction, conversation transcripts, and structured post-call summaries.
 
 ## Features
 
-- Browser speech recognition and speech synthesis with typed-query fallback.
-- Groq chat responses using `openai/gpt-oss-20b`.
-- Verified order details retrieved from the existing `get_order_details(order_id)` service.
-- Contextual order references, including `ORD-101`, `order 101`, and follow-ups such as “when will it arrive?”
-- Concise transcript and structured call summary.
-- Policy guidance without claiming to execute unsupported cancellations, refunds, or replacements.
+- **Voice interaction:** Speak to Aria through the browser microphone and hear spoken responses.
+- **AI-powered support:** Generate concise, conversational responses using Groq.
+- **Order lookup:** Retrieve mock order details using an order ID.
+- **Policy-aware responses:** Apply shipping, cancellation, return, refund, and damaged-product policies.
+- **Conversation context:** Use recent conversation history to support multi-turn interactions.
+- **Call transcript:** Review the conversation between the customer and Aria.
+- **Post-call summary:** Generate structured summaries containing customer intent, order ID, resolution status, and call summary.
+- **Error handling:** Handle AI request failures and invalid order references without silently claiming that an action was completed.
 
-## Requirements
+## Tech Stack
 
-- Node.js 20 or newer and npm.
-- A Groq API key.
-- A supported browser with microphone access for voice interaction. Typed questions work without speech recognition.
+| Component | Technology |
+|---|---|
+| Frontend | React, Vite, JavaScript |
+| Backend | Node.js, Express |
+| AI provider | Groq API |
+| AI model | `openai/gpt-oss-20b` |
+| Voice input | Browser Speech Recognition API |
+| Voice output | Browser Speech Synthesis API |
+| API communication | HTTP/REST |
 
-## Local setup
+## Architecture
 
-Install dependencies in each application:
+1. The React frontend captures customer input through voice or text.
+2. The Express backend receives requests through the AI API routes.
+3. The backend uses Groq to generate responses according to Aura Skincare's support policies.
+4. When an order reference is available, the backend retrieves the relevant mock order details.
+5. Responses return to the frontend, where Aria displays and speaks them.
+6. When a call ends, the backend generates a structured summary from the transcript.
 
-```powershell
+## Getting Started
+
+### Prerequisites
+
+- Node.js and npm
+- A Groq API key
+- A modern browser with microphone access for voice interaction
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/AnuSaha545/aura-skincare-ai-voice-agent.git
+cd aura-skincare-ai-voice-agent
+```
+
+### 2. Configure the backend
+
+```bash
 cd backend
 npm install
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Set `GROQ_API_KEY` in `backend/.env`. Configure the other values if needed:
+Create a `.env` file in the `backend` directory using `.env.example` as a reference.
 
-```dotenv
-GROQ_API_KEY=your_groq_api_key
-PORT=5000
-CORS_ORIGIN=http://localhost:5173
+Set your API key:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
-Start the backend:
+Never commit your real API key or `.env` file.
 
-```powershell
-npm run dev
+### 3. Start the backend
+
+From the `backend` directory, run:
+
+```bash
+npm start
 ```
 
-In a second terminal:
+The backend should be available at `http://localhost:5000` when using the default port configuration.
 
-```powershell
+### 4. Start the frontend
+
+Open a second terminal:
+
+```bash
 cd frontend
 npm install
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
 npm run dev
 ```
 
-The frontend defaults to `http://localhost:5000` when `VITE_API_URL` is not set. The provided frontend `.env` example sets that URL explicitly. Open the Vite URL (normally `http://localhost:5173`) and allow microphone access to use voice.
+Open the local URL printed by Vite in your terminal. Allow microphone access when prompted to test voice interaction.
 
-## Environment variables
+If your local package scripts differ, use the scripts defined in the corresponding `package.json`.
 
-| Variable | Application | Purpose |
-|---|---|---|
-| `GROQ_API_KEY` | Backend | Secret Groq API credential. Never put it in a `VITE_*` variable. |
-| `PORT` | Backend | HTTP port supplied by Render; defaults to `5000` locally. |
-| `CORS_ORIGIN` | Backend | Comma-separated allowed frontend origins. Defaults to `http://localhost:5173`. |
-| `VITE_API_URL` | Frontend | Backend origin, for example `https://aura-api.example.com`; `/api/ai` is appended by the app. |
+## Example Capabilities
 
-Environment files are ignored by Git; commit only the `.env.example` templates.
+### Order tracking
 
-## API
+A customer can ask Aria about an order using an order ID. The backend looks up the order and uses the returned information to formulate a response.
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/` | Backend health message |
-| `GET` | `/api/orders/:orderId` | Retrieve a demonstration order |
-| `POST` | `/api/ai/chat` | Generate an answer from `{ "message": "...", "history": [] }` |
-| `POST` | `/api/ai/summary` | Generate the four-field structured summary from a transcript |
+### Policy questions
 
-Order records are local demonstration data in `backend/data/orderData.js`; they are not live orders. Aria can explain that an order is eligible for cancellation but cannot perform a cancellation. Refunds and replacements likewise require a real operational backend that this project does not provide.
+Aria can explain the applicable shipping, delivery, cancellation, return, and damaged-product policies.
 
-The call summary response contains exactly `customer_intent`, `order_id`, `resolution_status`, and `call_summary`. Intent and status values are validated against the enums in the AI service; transactional requests remain unresolved because this app cannot execute those transactions.
+### Post-call summary
 
-## Deployment
+After a call ends, the application generates a structured summary with:
 
-### Render backend
+- `customer_intent`
+- `order_id`
+- `resolution_status`
+- `call_summary`
 
-Create a Render Web Service using the repository and the `backend` directory as the root:
+## Business Rules
 
-- Build command: `npm install`
-- Start command: `npm start`
-- Set `GROQ_API_KEY` to the secret in the Render environment settings.
-- Set `CORS_ORIGIN` to the deployed frontend origin (no trailing slash); multiple origins may be comma-separated.
-- Render provides `PORT`; the server listens on it automatically.
+- Free shipping applies to orders above ₹499; orders below ₹499 incur a ₹50 shipping fee.
+- Standard delivery takes 3–5 business days.
+- Returns are accepted within seven days of delivery for unopened, unused products in their original packaging.
+- Damaged or defective products must be reported within 48 hours with photos.
+- Orders in Processing status may be eligible for cancellation.
+- Shipped and Out for Delivery orders cannot be cancelled through the current support flow.
+- COD is available up to ₹2,500.
 
-### Vercel frontend
+The agent must not claim that a cancellation, refund, return, or replacement has been completed unless the system confirms it.
 
-Import the repository into Vercel and set the project root to `frontend`. Set `VITE_API_URL` to the Render backend origin, such as `https://aura-api.example.com`. Build with `npm run build` and publish `dist`. Vite embeds `VITE_*` values in the frontend, so never use this prefix for secrets.
+## Configuration and Security
 
-## Checks
+- Keep API credentials in environment variables.
+- Use `.env.example` to document required configuration without exposing secrets.
+- Do not commit real API keys or other credentials.
+- The current project uses mock order data; it is not connected to a live e-commerce order management system.
 
-From the repository root:
+## Current Limitations
 
-```powershell
-cd backend
-npm test
-node --check server.js
-node --check services/aiService.js
-cd ..\frontend
-npm run lint
-npm run build
-```
+- Browser voice recognition and speech synthesis depend on browser support and permissions.
+- Order information is based on mock data.
+- The current implementation does not perform real order cancellations, refunds, or replacements.
+- The application has not yet been presented here as a deployed production service.
+- Production use would require stronger validation, monitoring, privacy controls, rate limiting, and integration with live order systems.
 
-Speech recognition availability and accuracy depend on the browser and its speech service. Order data and tracking details are mock data; no cancellation, refund, replacement, or courier transaction is performed.
+## Future Improvements
+
+- Deploy the frontend and backend.
+- Integrate a real order management system.
+- Add automated tests for order lookup, AI responses, and call summaries.
+- Improve voice interruption handling and response latency.
+- Add monitoring, rate limiting, and production-grade error handling.
