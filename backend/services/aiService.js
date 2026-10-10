@@ -410,12 +410,13 @@ Rules:
       messages: [
         {
           role: "system",
-          content: "Generate accurate JSON summaries for support calls.",
+          content: "Return a valid JSON object only, with no Markdown or extra text. Include customer_intent, order_id, resolution_status, and call_summary."
         },
+
         { role: "user", content: prompt },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 256,
+      max_tokens: 512,
       temperature: 0.1,
     });
 
